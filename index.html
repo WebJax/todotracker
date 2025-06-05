@@ -39,6 +39,15 @@
             </div>
         </header>
 
+        <!-- Weekly View -->
+        <div id="weeklyView" class="bg-white rounded-lg shadow-md p-4 mb-6 flex flex-col sm:flex-row gap-2 justify-between items-center">
+            <div class="flex gap-2 flex-wrap" id="weekDaysContainer">
+                <!-- Week days will be rendered here -->
+            </div>
+            <button id="prevWeekBtn" class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-xs">&lt; Forrige uge</button>
+            <button id="nextWeekBtn" class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-xs">Næste uge &gt;</button>
+        </div>
+
         <!-- Tasks Container -->
         <div class="bg-white rounded-lg shadow-md p-6 mb-6">
             <div class="flex justify-between items-center mb-4">
@@ -76,6 +85,8 @@
             constructor() {
                 this.tasks = [];
                 this.activeTimers = new Map(); // Store active timers
+                this.currentWeekStart = null;
+                this.currentWeekEnd = null;
                 this.init();
             }
 
@@ -88,10 +99,67 @@
                 document.getElementById('addTaskBtn').addEventListener('click', () => this.addTask());
                 document.getElementById('saveDayBtn').addEventListener('click', () => this.saveDay());
                 document.getElementById('loadDayBtn').addEventListener('click', () => this.loadDay());
+                document.getElementById('prevWeekBtn').addEventListener('click', () => this.changeWeek(-1));
+                document.getElementById('nextWeekBtn').addEventListener('click', () => this.changeWeek(1));
+
+                // Initialize week view
+                this.initWeekView();
 
                 // Add initial task
                 this.addTask();
                 this.updateTotal();
+            }
+
+            initWeekView() {
+                const today = new Date();
+                const dayOfWeek = today.getDay() || 7; // Sunday is 0, convert to 7
+                const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust if Sunday
+                const weekStart = new Date(today.setDate(diff));
+                const weekEnd = new Date(today.setDate(diff + 6));
+
+                this.currentWeekStart = weekStart;
+                this.currentWeekEnd = weekEnd;
+
+                this.renderWeekDays(weekStart, weekEnd);
+            }
+
+            renderWeekDays(start, end) {
+                const container = document.getElementById('weekDaysContainer');
+                container.innerHTML = '';
+
+                let currentDate = new Date(start);
+                while (currentDate <= end) {
+                    const dayButton = document.createElement('button');
+                    dayButton.className = 'px-3 py-2 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors focus:outline-none';
+                    dayButton.textContent = currentDate.getDate();
+                    dayButton.dataset.date = currentDate.toISOString().split('T')[0];
+
+                    // Highlight today
+                    if (currentDate.toISOString().split('T')[0] === new Date().toISOString().split('T')[0]) {
+                        dayButton.classList.add('bg-primary', 'text-white');
+                    } else {
+                        dayButton.classList.add('text-gray-800');
+                    }
+
+                    dayButton.addEventListener('click', (e) => {
+                        const selectedDate = e.currentTarget.dataset.date;
+                        document.getElementById('dateInput').value = selectedDate;
+                        this.loadDay();
+                    });
+
+                    container.appendChild(dayButton);
+
+                    // Move to the next day
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+            }
+
+            changeWeek(direction) {
+                const diff = direction * 7; // 7 days in a week
+                this.currentWeekStart.setDate(this.currentWeekStart.getDate() + diff);
+                this.currentWeekEnd.setDate(this.currentWeekEnd.getDate() + diff);
+
+                this.renderWeekDays(this.currentWeekStart, this.currentWeekEnd);
             }
 
             addTask(taskData = null) {
@@ -133,12 +201,28 @@
                                 <span class="timer-display text-sm font-mono text-gray-600 min-w-[50px]">00:00</span>
                             </div>
                         </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Gentag</label>
+                            <select class="task-repeat w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <option value="none">Ingen</option>
+                                <option value="daily">Dagligt</option>
+                                <option value="weekly">Ugentligt</option>
+                                <option value="monthly">Månedligt</option>
+                                <option value="yearly">Årligt</option>
+                            </select>
+                        </div>
                         <div class="md:col-span-3">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Kommentar</label>
                             <input type="text" class="task-comment w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
                                    placeholder="Eventuel kommentar..." value="${taskData?.comment || ''}">
                         </div>
-                        <div class="md:col-span-1 flex items-end">
+                        <div class="md:col-span-1 flex items-end gap-1">
+                            <button class="move-task w-full md:w-auto px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" 
+                                    title="Flyt opgave">
+                                <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                                </svg>
+                            </button>
                             <button class="remove-task w-full md:w-auto px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2" 
                                     title="Fjern opgave">
                                 <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -167,6 +251,16 @@
 
                 const timerBtn = taskDiv.querySelector('.timer-btn');
                 timerBtn.addEventListener('click', () => this.toggleTimer(taskId));
+
+                // Move task event
+                const moveBtn = taskDiv.querySelector('.move-task');
+                moveBtn.addEventListener('click', () => this.moveTask(taskDiv));
+
+                // Set repeat value if editing/recurring
+                if (taskData && taskData.repeat) {
+                    const repeatSelect = taskDiv.querySelector('.task-repeat');
+                    repeatSelect.value = taskData.repeat;
+                }
 
                 // Initialize timer display based on existing time
                 const taskTimeInput = taskDiv.querySelector('.task-time');
@@ -198,9 +292,10 @@
                     const title = taskEl.querySelector('.task-title').value.trim();
                     const time = parseInt(taskEl.querySelector('.task-time').value) || 0;
                     const comment = taskEl.querySelector('.task-comment').value.trim();
+                    const repeat = taskEl.querySelector('.task-repeat')?.value || 'none';
                     
                     if (title || time > 0 || comment) {
-                        tasks.push({ title, time, comment });
+                        tasks.push({ title, time, comment, repeat });
                     }
                 });
                 
@@ -250,17 +345,47 @@
                     const response = await fetch(`load_tasks.php?date=${date}`);
                     const result = await response.json();
                     
+                    this.clearTasks();
+
+                    // Helper to check if a recurring task should appear on this date
+                    function isRecurringToday(task, dateStr) {
+                        if (!task.repeat || task.repeat === 'none') return false;
+                        const d = new Date(dateStr);
+                        const created = task.createdDate ? new Date(task.createdDate) : d;
+                        switch (task.repeat) {
+                            case 'daily':
+                                return true;
+                            case 'weekly':
+                                return d.getDay() === created.getDay();
+                            case 'monthly':
+                                return d.getDate() === created.getDate();
+                            case 'yearly':
+                                return d.getDate() === created.getDate() && d.getMonth() === created.getMonth();
+                            default:
+                                return false;
+                        }
+                    }
+
                     if (result.success) {
-                        this.clearTasks();
-                        
+                        // Add recurring tasks
                         if (result.data && result.data.tasks && result.data.tasks.length > 0) {
-                            result.data.tasks.forEach(task => this.addTask(task));
+                            result.data.tasks.forEach(task => {
+                                // If this is a recurring task, check if it should appear today
+                                if (task.repeat && task.repeat !== 'none') {
+                                    // Add a createdDate property if not present
+                                    if (!task.createdDate) task.createdDate = date;
+                                    if (isRecurringToday(task, date)) {
+                                        this.addTask(task);
+                                    }
+                                } else {
+                                    this.addTask(task);
+                                }
+                            });
                             this.showMessage('Dag hentet succesfuldt!', 'success');
                         } else {
                             this.addTask(); // Add empty task if no data
                             this.showMessage('Ingen data fundet for denne dato', 'warning');
                         }
-                        
                         this.updateTotal();
                         this.resetAllTimerDisplays();
                     } else {
@@ -413,6 +538,42 @@
                         messageDiv.remove();
                     }, 300);
                 }, 3000);
+            }
+
+            moveTask(taskDiv) {
+                const currentDate = document.getElementById('dateInput').value;
+                const taskId = taskDiv.dataset.taskId;
+                const taskTitle = taskDiv.querySelector('.task-title').value.trim();
+                const taskTime = parseInt(taskDiv.querySelector('.task-time').value) || 0;
+                const taskComment = taskDiv.querySelector('.task-comment').value.trim();
+
+                // Prompt for new date
+                const newDate = prompt('Indtast ny dato for opgaven (YYYY-MM-DD):', currentDate);
+                if (!newDate) return;
+
+                // Validate date format (simple check)
+                const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+                if (!datePattern.test(newDate)) {
+                    this.showMessage('Ugyldigt datoformat. Brug venligst YYYY-MM-DD.', 'error');
+                    return;
+                }
+
+                // Update task data
+                const taskData = { title: taskTitle, time: taskTime, comment: taskComment };
+                
+                // Remove task from current date
+                taskDiv.remove();
+
+                // Add task to new date
+                const newTaskDiv = this.addTask(taskData);
+
+                // Update date input
+                document.getElementById('dateInput').value = newDate;
+
+                // Save changes
+                this.saveDay();
+
+                this.showMessage('Opgave flyttet til ' + newDate, 'success');
             }
         }
 
