@@ -75,6 +75,7 @@
         class TimeTracker {
             constructor() {
                 this.tasks = [];
+                this.activeTimers = new Map(); // Store active timers
                 this.init();
             }
 
@@ -99,20 +100,40 @@
                 taskDiv.className = 'border border-gray-200 rounded-lg p-4 bg-gray-50';
                 
                 const taskId = Date.now() + Math.random();
+                taskDiv.dataset.taskId = taskId;
                 
                 taskDiv.innerHTML = `
                     <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-                        <div class="md:col-span-5">
+                        <div class="md:col-span-4">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Opgave</label>
                             <input type="text" class="task-title w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
                                    placeholder="Beskriv opgaven..." value="${taskData?.title || ''}">
                         </div>
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Tid (min)</label>
-                            <input type="number" class="task-time w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
-                                   placeholder="0" min="0" value="${taskData?.time || ''}">
+                            <div class="flex items-center gap-2">
+                                <input type="number" class="task-time w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
+                                       placeholder="0" min="0" value="${taskData?.time || ''}">
+                            </div>
                         </div>
-                        <div class="md:col-span-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Timer</label>
+                            <div class="flex items-center gap-2">
+                                <button class="timer-btn px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 flex items-center gap-1" 
+                                        title="Start timer">
+                                    <svg class="w-4 h-4 timer-icon-play" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h8m-9 4h10a1 1 0 001-1V7a1 1 0 00-1-1H6a1 1 0 00-1 1v10a1 1 0 001 1z"></path>
+                                    </svg>
+                                    <svg class="w-4 h-4 timer-icon-stop hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10h6v4H9z"></path>
+                                    </svg>
+                                    <span class="timer-text">Start</span>
+                                </button>
+                                <span class="timer-display text-sm font-mono text-gray-600 min-w-[50px]">00:00</span>
+                            </div>
+                        </div>
+                        <div class="md:col-span-3">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Kommentar</label>
                             <input type="text" class="task-comment w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
                                    placeholder="Eventuel kommentar..." value="${taskData?.comment || ''}">
@@ -136,9 +157,21 @@
 
                 const removeBtn = taskDiv.querySelector('.remove-task');
                 removeBtn.addEventListener('click', () => {
+                    // Stop timer if running
+                    if (this.activeTimers.has(taskId)) {
+                        this.stopTimer(taskId);
+                    }
                     taskDiv.remove();
                     this.updateTotal();
                 });
+
+                const timerBtn = taskDiv.querySelector('.timer-btn');
+                timerBtn.addEventListener('click', () => this.toggleTimer(taskId));
+
+                // Initialize timer display based on existing time
+                const taskTimeInput = taskDiv.querySelector('.task-time');
+                const timerDisplay = taskDiv.querySelector('.timer-display');
+                this.updateTimerDisplay(parseInt(taskTimeInput.value) || 0, timerDisplay);
             }
 
             updateTotal() {
@@ -229,6 +262,7 @@
                         }
                         
                         this.updateTotal();
+                        this.resetAllTimerDisplays();
                     } else {
                         this.showMessage('Fejl ved hentning: ' + result.message, 'error');
                     }
@@ -238,9 +272,123 @@
                 }
             }
 
+            resetAllTimerDisplays() {
+                const timerDisplays = document.querySelectorAll('.timer-display');
+                timerDisplays.forEach(display => {
+                    display.textContent = '00:00';
+                });
+            }
+
+            updateTimerDisplay(minutes, displayElement) {
+                const totalSeconds = minutes * 60;
+                const displayMinutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
+                displayElement.textContent = `${displayMinutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+
             clearTasks() {
                 const tasksContainer = document.getElementById('tasksContainer');
+                // Stop all running timers before clearing
+                this.activeTimers.forEach((timer, taskId) => {
+                    this.stopTimer(taskId);
+                });
                 tasksContainer.innerHTML = '';
+            }
+
+            toggleTimer(taskId) {
+                if (this.activeTimers.has(taskId)) {
+                    this.stopTimer(taskId);
+                } else {
+                    // Stop any other running timers first (only one timer at a time)
+                    this.activeTimers.forEach((timer, id) => {
+                        if (id !== taskId) {
+                            this.stopTimer(id);
+                        }
+                    });
+                    this.startTimer(taskId);
+                }
+            }
+
+            startTimer(taskId) {
+                const taskDiv = document.querySelector(`[data-task-id="${taskId}"]`);
+                if (!taskDiv) return;
+
+                const timerBtn = taskDiv.querySelector('.timer-btn');
+                const timerText = taskDiv.querySelector('.timer-text');
+                const timerDisplay = taskDiv.querySelector('.timer-display');
+                const playIcon = taskDiv.querySelector('.timer-icon-play');
+                const stopIcon = taskDiv.querySelector('.timer-icon-stop');
+                const timeInput = taskDiv.querySelector('.task-time');
+
+                // Update button appearance
+                timerBtn.className = timerBtn.className.replace('bg-green-500', 'bg-red-500').replace('hover:bg-green-600', 'hover:bg-red-600');
+                timerText.textContent = 'Stop';
+                playIcon.classList.add('hidden');
+                stopIcon.classList.remove('hidden');
+
+                // Add pulsing effect to indicate active timer
+                taskDiv.classList.add('ring-2', 'ring-green-400', 'ring-opacity-50');
+
+                const startTime = Date.now();
+                const initialMinutes = parseInt(timeInput.value) || 0;
+                const initialSeconds = initialMinutes * 60;
+
+                const timer = setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                    const totalSeconds = initialSeconds + elapsed;
+                    
+                    const minutes = Math.floor(totalSeconds / 60);
+                    const seconds = totalSeconds % 60;
+                    
+                    timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    timeInput.value = minutes;
+                    
+                    this.updateTotal();
+                }, 1000);
+
+                this.activeTimers.set(taskId, {
+                    timer,
+                    startTime,
+                    initialSeconds
+                });
+            }
+
+            stopTimer(taskId) {
+                const timerData = this.activeTimers.get(taskId);
+                if (!timerData) return;
+
+                const taskDiv = document.querySelector(`[data-task-id="${taskId}"]`);
+                if (!taskDiv) return;
+
+                clearInterval(timerData.timer);
+                this.activeTimers.delete(taskId);
+
+                const timerBtn = taskDiv.querySelector('.timer-btn');
+                const timerText = taskDiv.querySelector('.timer-text');
+                const timerDisplay = taskDiv.querySelector('.timer-display');
+                const playIcon = taskDiv.querySelector('.timer-icon-play');
+                const stopIcon = taskDiv.querySelector('.timer-icon-stop');
+                const timeInput = taskDiv.querySelector('.task-time');
+
+                // Update button appearance
+                timerBtn.className = timerBtn.className.replace('bg-red-500', 'bg-green-500').replace('hover:bg-red-600', 'hover:bg-green-600');
+                timerText.textContent = 'Start';
+                playIcon.classList.remove('hidden');
+                stopIcon.classList.add('hidden');
+
+                // Remove pulsing effect
+                taskDiv.classList.remove('ring-2', 'ring-green-400', 'ring-opacity-50');
+
+                // Calculate final time and update display
+                const elapsed = Math.floor((Date.now() - timerData.startTime) / 1000);
+                const totalSeconds = timerData.initialSeconds + elapsed;
+                const finalMinutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
+                
+                timeInput.value = finalMinutes;
+                timerDisplay.textContent = `${finalMinutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                this.updateTotal();
             }
 
             showMessage(message, type = 'info') {
