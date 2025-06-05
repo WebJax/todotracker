@@ -1,0 +1,27 @@
+# Data files (optional - you might want to include sample data)
+/data/*.json
+
+# PHP error logs
+*.log
+error_log
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
+
+# Local configuration files (if any)
+config.local.php
+
+# Backup files
+*.bak
+*.backup

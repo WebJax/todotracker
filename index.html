@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timetracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header -->
+        <header class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-4">Timetracker</h1>
+            <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                <div class="flex items-center gap-2">
+                    <label for="dateInput" class="text-sm font-medium text-gray-700">Dato:</label>
+                    <input type="date" id="dateInput" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                </div>
+                <div class="flex gap-2">
+                    <button id="loadDayBtn" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                        Hent dag
+                    </button>
+                    <button id="saveDayBtn" class="px-4 py-2 bg-secondary text-white rounded-md hover:bg-green-600 transition-colors focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2">
+                        Gem dag
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Tasks Container -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-800">Opgaver</h2>
+                <button id="addTaskBtn" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                    + Tilføj opgave
+                </button>
+            </div>
+            
+            <div id="tasksContainer" class="space-y-4">
+                <!-- Tasks will be dynamically added here -->
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800">Total tid:</h3>
+                <div class="text-right">
+                    <span id="totalMinutes" class="text-2xl font-bold text-primary">0</span>
+                    <span class="text-sm text-gray-600">minutter</span>
+                    <div class="text-sm text-gray-500">
+                        (<span id="totalHours">0t 0m</span>)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div id="messageContainer" class="fixed top-4 right-4 z-50"></div>
+    </div>
+
+    <script>
+        class TimeTracker {
+            constructor() {
+                this.tasks = [];
+                this.init();
+            }
+
+            init() {
+                // Set today's date as default
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('dateInput').value = today;
+
+                // Event listeners
+                document.getElementById('addTaskBtn').addEventListener('click', () => this.addTask());
+                document.getElementById('saveDayBtn').addEventListener('click', () => this.saveDay());
+                document.getElementById('loadDayBtn').addEventListener('click', () => this.loadDay());
+
+                // Add initial task
+                this.addTask();
+                this.updateTotal();
+            }
+
+            addTask(taskData = null) {
+                const tasksContainer = document.getElementById('tasksContainer');
+                const taskDiv = document.createElement('div');
+                taskDiv.className = 'border border-gray-200 rounded-lg p-4 bg-gray-50';
+                
+                const taskId = Date.now() + Math.random();
+                
+                taskDiv.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+                        <div class="md:col-span-5">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Opgave</label>
+                            <input type="text" class="task-title w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
+                                   placeholder="Beskriv opgaven..." value="${taskData?.title || ''}">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tid (min)</label>
+                            <input type="number" class="task-time w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
+                                   placeholder="0" min="0" value="${taskData?.time || ''}">
+                        </div>
+                        <div class="md:col-span-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Kommentar</label>
+                            <input type="text" class="task-comment w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
+                                   placeholder="Eventuel kommentar..." value="${taskData?.comment || ''}">
+                        </div>
+                        <div class="md:col-span-1 flex items-end">
+                            <button class="remove-task w-full md:w-auto px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2" 
+                                    title="Fjern opgave">
+                                <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                tasksContainer.appendChild(taskDiv);
+
+                // Add event listeners
+                const timeInput = taskDiv.querySelector('.task-time');
+                timeInput.addEventListener('input', () => this.updateTotal());
+
+                const removeBtn = taskDiv.querySelector('.remove-task');
+                removeBtn.addEventListener('click', () => {
+                    taskDiv.remove();
+                    this.updateTotal();
+                });
+            }
+
+            updateTotal() {
+                const timeInputs = document.querySelectorAll('.task-time');
+                let total = 0;
+                
+                timeInputs.forEach(input => {
+                    const value = parseInt(input.value) || 0;
+                    total += value;
+                });
+
+                document.getElementById('totalMinutes').textContent = total;
+                
+                const hours = Math.floor(total / 60);
+                const minutes = total % 60;
+                document.getElementById('totalHours').textContent = `${hours}t ${minutes}m`;
+            }
+
+            collectTasks() {
+                const tasks = [];
+                const taskElements = document.querySelectorAll('#tasksContainer > div');
+                
+                taskElements.forEach(taskEl => {
+                    const title = taskEl.querySelector('.task-title').value.trim();
+                    const time = parseInt(taskEl.querySelector('.task-time').value) || 0;
+                    const comment = taskEl.querySelector('.task-comment').value.trim();
+                    
+                    if (title || time > 0 || comment) {
+                        tasks.push({ title, time, comment });
+                    }
+                });
+                
+                return tasks;
+            }
+
+            async saveDay() {
+                const date = document.getElementById('dateInput').value;
+                if (!date) {
+                    this.showMessage('Vælg venligst en dato', 'error');
+                    return;
+                }
+
+                const tasks = this.collectTasks();
+                const data = { date, tasks };
+
+                try {
+                    const response = await fetch('save_tasks.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        this.showMessage('Dag gemt succesfuldt!', 'success');
+                    } else {
+                        this.showMessage('Fejl ved gemning: ' + result.message, 'error');
+                    }
+                } catch (error) {
+                    this.showMessage('Netværksfejl ved gemning', 'error');
+                    console.error('Save error:', error);
+                }
+            }
+
+            async loadDay() {
+                const date = document.getElementById('dateInput').value;
+                if (!date) {
+                    this.showMessage('Vælg venligst en dato', 'error');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`load_tasks.php?date=${date}`);
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        this.clearTasks();
+                        
+                        if (result.data && result.data.tasks && result.data.tasks.length > 0) {
+                            result.data.tasks.forEach(task => this.addTask(task));
+                            this.showMessage('Dag hentet succesfuldt!', 'success');
+                        } else {
+                            this.addTask(); // Add empty task if no data
+                            this.showMessage('Ingen data fundet for denne dato', 'warning');
+                        }
+                        
+                        this.updateTotal();
+                    } else {
+                        this.showMessage('Fejl ved hentning: ' + result.message, 'error');
+                    }
+                } catch (error) {
+                    this.showMessage('Netværksfejl ved hentning', 'error');
+                    console.error('Load error:', error);
+                }
+            }
+
+            clearTasks() {
+                const tasksContainer = document.getElementById('tasksContainer');
+                tasksContainer.innerHTML = '';
+            }
+
+            showMessage(message, type = 'info') {
+                const messageContainer = document.getElementById('messageContainer');
+                const messageDiv = document.createElement('div');
+                
+                const bgColor = {
+                    success: 'bg-green-500',
+                    error: 'bg-red-500',
+                    warning: 'bg-yellow-500',
+                    info: 'bg-blue-500'
+                }[type];
+
+                messageDiv.className = `${bgColor} text-white px-4 py-2 rounded-md shadow-lg mb-2 transition-opacity duration-300`;
+                messageDiv.textContent = message;
+                
+                messageContainer.appendChild(messageDiv);
+                
+                setTimeout(() => {
+                    messageDiv.style.opacity = '0';
+                    setTimeout(() => {
+                        messageDiv.remove();
+                    }, 300);
+                }, 3000);
+            }
+        }
+
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new TimeTracker();
+        });
+    </script>
+</body>
+</html>

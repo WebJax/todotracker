@@ -1,0 +1,30 @@
+# Enable PHP error reporting for development (remove in production)
+php_flag display_errors on
+php_flag display_startup_errors on
+
+# Security headers
+Header always set X-Content-Type-Options "nosniff"
+Header always set X-Frame-Options "DENY"
+Header always set X-XSS-Protection "1; mode=block"
+
+# CORS headers for local development
+Header always set Access-Control-Allow-Origin "*"
+Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+Header always set Access-Control-Allow-Headers "Content-Type"
+
+# Handle OPTIONS requests
+RewriteEngine On
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=200,L]
+
+# Protect data directory
+<Files "data/*">
+    Order deny,allow
+    Deny from all
+</Files>
+
+# Only allow access to specific file types
+<FilesMatch "\.(php|html|js|css|json)$">
+    Order allow,deny
+    Allow from all
+</FilesMatch>
