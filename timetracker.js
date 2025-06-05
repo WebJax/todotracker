@@ -21,6 +21,9 @@ class TimeTracker {
         this.weekView.initWeekView();
         this.addTask();
         this.updateTotal();
+
+        // Recurring Task Management UI
+        this.addRecurringTaskUI();
     }
 
     onSelectDay(date) {
@@ -29,8 +32,144 @@ class TimeTracker {
     }
 
     addTask(taskData = null) {
-        // Use TaskList to add task, but rendering is still handled here for now
-        this.taskList.addTask(taskData);
+        const tasksContainer = document.getElementById('tasksContainer');
+        const taskDiv = document.createElement('div');
+        taskDiv.className = 'border border-gray-200 rounded-lg p-4 bg-gray-50';
+        
+        const taskId = Date.now() + Math.random();
+        taskDiv.dataset.taskId = taskId;
+        if (taskData && taskData.id) {
+            taskDiv.dataset.recurringId = taskData.id;
+        }
+        
+        taskDiv.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+                <div class="md:col-span-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Opgave</label>
+                    <input type="text" class="task-title w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
+                           placeholder="Beskriv opgaven..." value="${taskData?.title || ''}">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tid (min)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" class="task-time w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
+                               placeholder="0" min="0" value="${taskData?.time || ''}">
+                    </div>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Timer</label>
+                    <div class="flex items-center gap-2">
+                        <button class="timer-btn px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 flex items-center gap-1" 
+                                title="Start timer">
+                            <svg class="w-4 h-4 timer-icon-play" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h8m-9 4h10a1 1 0 001-1V7a1 1 0 00-1-1H6a1 1 0 00-1 1v10a1 1 0 001 1z"></path>
+                            </svg>
+                            <svg class="w-4 h-4 timer-icon-stop hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10h6v4H9z"></path>
+                            </svg>
+                            <span class="timer-text">Start</span>
+                        </button>
+                        <span class="timer-display text-sm font-mono text-gray-600 min-w-[50px]">00:00</span>
+                    </div>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Gentag</label>
+                    <select class="task-repeat w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <option value="none">Ingen</option>
+                        <option value="daily">Dagligt</option>
+                        <option value="weekly">Ugentligt</option>
+                        <option value="monthly">Månedligt</option>
+                        <option value="yearly">Årligt</option>
+                    </select>
+                </div>
+                <div class="md:col-span-1 flex items-end gap-1">
+                    <label class="inline-flex items-center">
+                        <input type="checkbox" class="task-done" ${taskData?.done ? 'checked' : ''}>
+                        <span class="ml-2">Udført</span>
+                    </label>
+                </div>
+                <div class="md:col-span-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Kommentar</label>
+                    <input type="text" class="task-comment w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
+                           placeholder="Eventuel kommentar..." value="${taskData?.comment || ''}">
+                </div>
+                <div class="md:col-span-1 flex items-end gap-1">
+                    <button class="move-task w-full md:w-auto px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" 
+                            title="Flyt opgave">
+                        <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                        </svg>
+                    </button>
+                    <button class="remove-task w-full md:w-auto px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2" 
+                            title="Fjern opgave">
+                        <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        tasksContainer.appendChild(taskDiv);
+
+        // Attach event listeners to the new task elements
+        taskDiv.querySelector('.remove-task').addEventListener('click', () => {
+            taskDiv.remove();
+            this.updateTotal();
+        });
+
+        const moveTaskBtn = taskDiv.querySelector('.move-task');
+        moveTaskBtn.addEventListener('click', () => {
+            this.moveTask(taskDiv);
+        });
+
+        const timerBtn = taskDiv.querySelector('.timer-btn');
+        timerBtn.addEventListener('click', () => {
+            const taskId = taskDiv.dataset.taskId;
+            this.toggleTimer(taskId);
+        });
+
+        const timeInput = taskDiv.querySelector('.task-time');
+        timeInput.addEventListener('input', () => {
+            const value = parseInt(timeInput.value) || 0;
+            this.updateTimerDisplay(value, taskDiv.querySelector('.timer-display'));
+            this.updateTotal();
+        });
+
+        const doneCheckbox = taskDiv.querySelector('.task-done');
+        doneCheckbox.addEventListener('change', () => {
+            const isChecked = doneCheckbox.checked;
+            taskDiv.querySelector('.task-title').classList.toggle('line-through', isChecked);
+            taskDiv.querySelector('.task-title').classList.toggle('text-gray-400', isChecked);
+            taskDiv.querySelector('.task-time').disabled = isChecked;
+            taskDiv.querySelector('.task-comment').disabled = isChecked;
+            taskDiv.querySelector('.task-repeat').disabled = isChecked;
+            taskDiv.querySelector('.timer-btn').disabled = isChecked;
+            taskDiv.querySelector('.move-task').disabled = isChecked;
+            taskDiv.querySelector('.remove-task').disabled = isChecked;
+
+            if (isChecked) {
+                // If checked, stop the timer and save the current time
+                const taskId = taskDiv.dataset.taskId;
+                this.stopTimer(taskId);
+            }
+        });
+
+        // Initialize the task repeat select
+        const repeatSelect = taskDiv.querySelector('.task-repeat');
+        repeatSelect.value = taskData?.repeat || 'none';
+        repeatSelect.addEventListener('change', () => {
+            const selectedValue = repeatSelect.value;
+            if (selectedValue === 'none') {
+                taskDiv.querySelector('.task-comment').placeholder = 'Eventuel kommentar...';
+            } else {
+                taskDiv.querySelector('.task-comment').placeholder = `Kommentar til ${selectedValue} opgave...`;
+            }
+        });
+
+        // Initialize timer display
+        this.updateTimerDisplay(0, taskDiv.querySelector('.timer-display'));
     }
 
     collectTasks() {
@@ -42,9 +181,11 @@ class TimeTracker {
             const time = parseInt(taskEl.querySelector('.task-time').value) || 0;
             const comment = taskEl.querySelector('.task-comment').value.trim();
             const repeat = taskEl.querySelector('.task-repeat')?.value || 'none';
+            const done = taskEl.querySelector('.task-done')?.checked || false;
+            const id = taskEl.dataset.recurringId || undefined;
             
             if (title || time > 0 || comment) {
-                tasks.push({ title, time, comment, repeat });
+                tasks.push({ title, time, comment, repeat, done, id });
             }
         });
         
@@ -59,7 +200,23 @@ class TimeTracker {
         }
 
         const tasks = this.collectTasks();
-        const data = { date, tasks };
+        // Split into recurring and normal tasks
+        const normalTasks = [];
+        const recurringUpdates = [];
+        tasks.forEach(task => {
+            if (task.repeat && task.repeat !== 'none') {
+                // If it's a recurring task, only save status/time for today
+                recurringUpdates.push({
+                    recurring_id: task.id,
+                    time: task.time,
+                    done: task.done,
+                    date: date
+                });
+            } else {
+                normalTasks.push(task);
+            }
+        });
+        const data = { date, tasks: normalTasks, recurringUpdates };
 
         try {
             const response = await fetch('save_tasks.php', {
@@ -90,10 +247,18 @@ class TimeTracker {
             return;
         }
 
+        // Fetch recurring tasks
+        let recurringTasks = [];
+        try {
+            const recurringResp = await fetch('recurring_tasks.json');
+            recurringTasks = await recurringResp.json();
+        } catch (e) {
+            recurringTasks = [];
+        }
+
         try {
             const response = await fetch(`load_tasks.php?date=${date}`);
             const result = await response.json();
-            
             this.clearTasks();
 
             // Helper to check if a recurring task should appear on this date
@@ -115,31 +280,34 @@ class TimeTracker {
                 }
             }
 
+            let dayTasks = [];
+            let recurringUpdates = [];
             if (result.success) {
-                // Add recurring tasks
-                if (result.data && result.data.tasks && result.data.tasks.length > 0) {
-                    result.data.tasks.forEach(task => {
-                        // If this is a recurring task, check if it should appear today
-                        if (task.repeat && task.repeat !== 'none') {
-                            // Add a createdDate property if not present
-                            if (!task.createdDate) task.createdDate = date;
-                            if (isRecurringToday(task, date)) {
-                                this.addTask(task);
-                            }
-                        } else {
-                            this.addTask(task);
-                        }
-                    });
-                    this.showMessage('Dag hentet succesfuldt!', 'success');
-                } else {
-                    this.addTask(); // Add empty task if no data
-                    this.showMessage('Ingen data fundet for denne dato', 'warning');
-                }
-                this.updateTotal();
-                this.resetAllTimerDisplays();
-            } else {
-                this.showMessage('Fejl ved hentning: ' + result.message, 'error');
+                if (result.data && result.data.tasks) dayTasks = result.data.tasks;
+                if (result.data && result.data.recurringUpdates) recurringUpdates = result.data.recurringUpdates;
             }
+
+            // Add normal tasks
+            dayTasks.forEach(task => this.addTask(task));
+
+            // Add recurring tasks (merge with updates for this day)
+            recurringTasks.forEach(recTask => {
+                if (isRecurringToday(recTask, date)) {
+                    // Find update for this recurring task on this day
+                    const update = recurringUpdates.find(u => u.recurring_id === recTask.id);
+                    this.addTask({
+                        ...recTask,
+                        time: update ? update.time : 0,
+                        done: update ? update.done : false,
+                        repeat: recTask.repeat,
+                        id: recTask.id
+                    });
+                }
+            });
+
+            this.updateTotal();
+            this.resetAllTimerDisplays();
+            this.showMessage('Dag hentet succesfuldt!', 'success');
         } catch (error) {
             this.showMessage('Netværksfejl ved hentning', 'error');
             console.error('Load error:', error);
@@ -340,9 +508,108 @@ class TimeTracker {
 
         this.showMessage('Opgave flyttet til ' + newDate, 'success');
     }
+
+    // Recurring Task Management UI
+    addRecurringTaskUI() {
+        // Add a button to open modal
+        const btn = document.createElement('button');
+        btn.id = 'manageRecurringBtn';
+        btn.textContent = 'Administrer gentagelser';
+        btn.className = 'px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 mb-4';
+        document.body.appendChild(btn);
+
+        // Modal
+        const modal = document.createElement('div');
+        modal.id = 'recurringModal';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden';
+        modal.innerHTML = `
+            <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+                <h2 class="text-xl font-bold mb-4">Gentagende opgaver</h2>
+                <div id="recurringList"></div>
+                <button id="addRecurringBtn" class="mt-4 px-4 py-2 bg-primary text-white rounded">+ Tilføj gentagelse</button>
+                <button id="closeRecurringModal" class="mt-4 ml-2 px-4 py-2 bg-gray-400 text-white rounded">Luk</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        btn.addEventListener('click', () => { modal.classList.remove('hidden'); this.renderRecurringList(); });
+        modal.querySelector('#closeRecurringModal').addEventListener('click', () => modal.classList.add('hidden'));
+        modal.querySelector('#addRecurringBtn').addEventListener('click', () => this.showRecurringForm());
+    }
+
+    async renderRecurringList() {
+        const listDiv = document.getElementById('recurringList');
+        let tasks = [];
+        try {
+            const resp = await fetch('recurring_tasks.json');
+            tasks = await resp.json();
+        } catch {}
+        listDiv.innerHTML = tasks.map(t => `
+            <div class="flex justify-between items-center border-b py-2">
+                <span>${t.title} (${t.repeat})</span>
+                <span>
+                    <button class="editRecurringBtn text-blue-600 mr-2" data-id="${t.id}">Rediger</button>
+                    <button class="deleteRecurringBtn text-red-600" data-id="${t.id}">Slet</button>
+                </span>
+            </div>
+        `).join('') || '<div class="text-gray-500">Ingen gentagelser</div>';
+        listDiv.querySelectorAll('.editRecurringBtn').forEach(btn => btn.addEventListener('click', e => this.showRecurringForm(e.target.dataset.id)));
+        listDiv.querySelectorAll('.deleteRecurringBtn').forEach(btn => btn.addEventListener('click', e => this.deleteRecurringTask(e.target.dataset.id)));
+    }
+
+    showRecurringForm(id = null) {
+        // Simple prompt-based form for demo
+        let task = { title: '', comment: '', repeat: 'daily' };
+        if (id) {
+            // Find task
+            fetch('recurring_tasks.json').then(r => r.json()).then(tasks => {
+                const t = tasks.find(t => t.id === id);
+                if (t) {
+                    task = t;
+                    this.promptRecurringForm(task, true);
+                }
+            });
+        } else {
+            this.promptRecurringForm(task, false);
+        }
+    }
+
+    promptRecurringForm(task, isEdit) {
+        const title = prompt('Titel:', task.title || '');
+        if (title === null) return;
+        const comment = prompt('Kommentar:', task.comment || '');
+        if (comment === null) return;
+        const repeat = prompt('Gentag (daily, weekly, monthly, yearly):', task.repeat || 'daily');
+        if (repeat === null) return;
+        const newTask = { ...task, title, comment, repeat };
+        if (!isEdit) newTask.id = Math.random().toString(36).substr(2, 9);
+        fetch('save_tasks.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                recurringTaskAction: isEdit ? 'edit' : 'add',
+                recurringTask: newTask,
+                date: '', tasks: []
+            })
+        }).then(() => { document.getElementById('recurringModal').classList.remove('hidden'); this.renderRecurringList(); });
+    }
+
+    deleteRecurringTask(id) {
+        if (!confirm('Slet gentagelse?')) return;
+        fetch('save_tasks.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                recurringTaskAction: 'delete',
+                recurringTaskId: id,
+                date: '', tasks: []
+            })
+        }).then(() => { this.renderRecurringList(); });
+    }
 }
 
 // Initialize the app when DOM is loaded
 window.addEventListener('DOMContentLoaded', () => {
-    new TimeTracker();
+    const tracker = new TimeTracker();
+    tracker.addRecurringTaskUI();
 });

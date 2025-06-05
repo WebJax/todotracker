@@ -66,6 +66,20 @@
 
         <!-- Success/Error Messages -->
         <div id="messageContainer" class="fixed top-4 right-4 z-50"></div>
+
+        <!-- Recurring Task Management UI -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-800">Gentagende opgaver</h2>
+                <button id="manageRecurringBtn" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                    Administrer gentagelser
+                </button>
+            </div>
+            
+            <div id="recurringTasksContainer" class="space-y-4">
+                <!-- Recurring tasks will be dynamically added here -->
+            </div>
+        </div>
     </div>
 
     <script type="module" src="timetracker.js"></script>
