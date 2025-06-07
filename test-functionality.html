@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TimeTracker Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .test-result { margin: 10px 0; padding: 10px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        button { margin: 5px; padding: 10px 15px; }
+    </style>
+</head>
+<body>
+    <h1>TimeTracker Functionality Test</h1>
+    
+    <div class="test-section">
+        <h3>Test 1: API Endpoints</h3>
+        <button onclick="testGetTasks()">Test Get Tasks</button>
+        <button onclick="testGetComments()">Test Get Comments</button>
+        <div id="api-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 2: Load Main Application</h3>
+        <button onclick="loadMainApp()">Load Main App</button>
+        <div id="app-results"></div>
+    </div>
+
+    <script>
+        async function testGetTasks() {
+            const resultsDiv = document.getElementById('api-results');
+            try {
+                const response = await fetch('/api/?action=get_tasks&date=' + new Date().toISOString().split('T')[0]);
+                const data = await response.json();
+                resultsDiv.innerHTML += `<div class="test-result success">✓ Get Tasks API: ${data.length} tasks loaded</div>`;
+                console.log('Tasks:', data);
+            } catch (error) {
+                resultsDiv.innerHTML += `<div class="test-result error">✗ Get Tasks API Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testGetComments() {
+            const resultsDiv = document.getElementById('api-results');
+            try {
+                const response = await fetch('/api/?action=get_task_comments&task_id=1&date=' + new Date().toISOString().split('T')[0]);
+                const data = await response.json();
+                resultsDiv.innerHTML += `<div class="test-result success">✓ Get Comments API: ${data.length} comments loaded</div>`;
+                console.log('Comments:', data);
+            } catch (error) {
+                resultsDiv.innerHTML += `<div class="test-result error">✗ Get Comments API Error: ${error.message}</div>`;
+            }
+        }
+
+        function loadMainApp() {
+            const resultsDiv = document.getElementById('app-results');
+            resultsDiv.innerHTML = '<iframe src="/" width="100%" height="600" style="border: 1px solid #ccc;"></iframe>';
+        }
+    </script>
+</body>
+</html>

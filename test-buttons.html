@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Buttons - TimeTracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Test Edit and Delete Buttons</h1>
+        
+        <div id="task-list">
+            <!-- We'll create a sample task here -->
+        </div>
+
+        <!-- Modal for editing tasks -->
+        <div id="modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2 id="modal-title">Rediger Opgave</h2>
+                <div id="modal-content"></div>
+                <div class="modal-buttons">
+                    <button id="modal-save-btn" class="btn btn-primary">Gem</button>
+                    <button id="modal-cancel-btn" class="btn btn-secondary">Annuller</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/ApiHandler.js"></script>
+    <script src="js/UI.js"></script>
+    <script>
+        // Simple test setup
+        class TestApp {
+            static state = {
+                tasks: [
+                    {
+                        id: 1,
+                        title: "Test Task",
+                        recurrence: "daily",
+                        is_completed: false,
+                        running_entry_id: null,
+                        total_minutes_today: 30
+                    }
+                ],
+                currentDate: new Date(),
+                activeTimer: null
+            };
+
+            static init() {
+                this.renderTestTask();
+                this.setupEventListeners();
+            }
+
+            static renderTestTask() {
+                const taskList = document.getElementById('task-list');
+                const task = this.state.tasks[0];
+                const taskEl = UI.createTaskElement(task);
+                taskList.appendChild(taskEl);
+            }
+
+            static setupEventListeners() {
+                document.getElementById('task-list').addEventListener('click', (e) => {
+                    console.log('Click detected:', e.target);
+                    const taskEl = e.target.closest('.task');
+                    if (!taskEl) return;
+                    
+                    const taskId = parseInt(taskEl.dataset.id);
+                    
+                    if (e.target.matches('.delete-btn')) {
+                        console.log('Delete button clicked for task:', taskId);
+                        this.handleDeleteClick(taskId, taskEl);
+                    } else if (e.target.matches('.edit-btn')) {
+                        console.log('Edit button clicked for task:', taskId);
+                        this.handleEditClick(taskId, taskEl);
+                    }
+                });
+            }
+
+            static async handleDeleteClick(taskId, taskEl) {
+                console.log('Test delete for task:', taskId);
+                const confirmed = confirm('Test: Delete this task?');
+                if (confirmed) {
+                    console.log('Delete confirmed');
+                    taskEl.style.opacity = '0.5';
+                } else {
+                    console.log('Delete cancelled');
+                }
+            }
+
+            static handleEditClick(taskId, taskEl) {
+                console.log('Test edit for task:', taskId);
+                const task = this.state.tasks.find(t => t.id === taskId);
+                if (!task) return;
+                
+                UI.showEditTaskModal(task.title, task.recurrence, (newTitle, newRecurrence) => {
+                    if (newTitle !== null) {
+                        console.log('Test edit result:', { newTitle, newRecurrence });
+                        alert(`Test: Would update task to "${newTitle}" with recurrence "${newRecurrence}"`);
+                    } else {
+                        console.log('Edit cancelled');
+                    }
+                });
+            }
+        }
+
+        // Initialize test app
+        TestApp.init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TimeTracker Pro</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>TimeTracker</h1>
+            <nav id="main-nav">
+                <button data-view="tasks" class="active">Opgaver</button>
+                <button data-view="week">Ugeoversigt</button>
+                <button data-view="year">Årsoversigt</button>
+            </nav>
+        </header>
+
+        <!-- Tasks View -->
+        <main id="tasks-view" class="view">
+            <div class="date-navigator">
+                <button id="prev-day-btn">&lt;</button>
+                <h2 id="current-date"></h2>
+                <button id="next-day-btn">&gt;</button>
+            </div>
+            <div id="task-list">
+                <div class="loader">Arbejder...</div>
+            </div>
+            <form id="add-task-form">
+                <input type="text" id="task-title" placeholder="Ny opgave..." required>
+                <select id="task-recurrence">
+                    <option value="none">Ingen gentagelse</option>
+                    <option value="daily">Daglig</option>
+                    <option value="weekly">Ugentlig</option>
+                    <option value="monthly">Månedlig</option>
+                    <option value="yearly">Årlig</option>
+                </select>
+                <button type="submit">Tilføj</button>
+            </form>
+        </main>
+
+        <!-- Week Overview View -->
+        <section id="week-view" class="view hidden">
+            <h2>Ugeoversigt</h2>
+            <canvas id="week-chart"></canvas>
+        </section>
+
+        <!-- Year Overview View -->
+        <section id="year-view" class="view hidden">
+            <h2>Årsoversigt</h2>
+            <canvas id="year-chart"></canvas>
+        </section>
+    </div>
+
+    <!-- Modal for comments -->
+    <div id="comment-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Tilføj kommentar (valgfrit)</h3>
+            <textarea id="modal-comment" placeholder="Hvad har du lavet?"></textarea>
+            <div class="modal-actions">
+                <button id="modal-cancel-btn">Annuller</button>
+                <button id="modal-save-btn">Gem</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for editing tasks -->
+    <div id="modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modal-title">Modal Title</h2>
+            <div id="modal-content"></div>
+            <div class="modal-actions">
+                <button id="edit-modal-save-btn" class="btn btn-primary">Gem</button>
+                <button id="edit-modal-cancel-btn" class="btn btn-secondary">Annuller</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/ApiHandler.js"></script>
+    <script src="js/UI.js"></script>
+    <script src="js/app.js"></script>
+    <script src="debug.js"></script>
+</body>
+</html>
